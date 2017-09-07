@@ -1,0 +1,85 @@
+<?php
+
+/**
+ * @file
+ * Module file for Missing Integrity Quiz Module.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+
+function missing_integrity_menu() {
+  $items = array();
+  $items['admin/config/content/missing_integrity'] = array(
+    'title' => 'Missing Integrity Quiz Settings',
+    'description' => 'Module settings page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('missing_integrity_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'missing_integrity.pages.inc',
+  );
+  $items['admin/missing_integrity/results'] = array(
+    'page callback' => 'missing_integrity_get_results',
+    'page arguments' => array(NULL, TRUE),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer users'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_block_info
+ */
+
+function custom_module_block_info() {
+  $blocks['missing_integrity'] = array(
+    'info' => t('Missing Integrity Quiz Block'),
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );
+  return $blocks;
+}
+
+function missing_integrity_get_results () {
+  
+  /* 
+   * Get result of current Recent Integrity Table view
+   * Recent Integrity Table view is generated via Data and Feeds module
+   * Shows list of all students for the semester
+   */
+  
+  $full_stu_list = views_get_view_result('recent_integrity_table', 'page');
+  $completed_quiz = views_get_view_result('quiz_results', 'page', '501');
+  
+  $usernames = [];
+  $completed_emails = [];
+  
+  /* Build array of usernames/email address of
+   * students who have completed quiz successfully
+   */
+  
+  foreach($completed_quiz as $key => $value) {
+    $usernames[] = $value->users_quiz_node_results_name;
+  }
+  
+  foreach($full_stu_list as $key => $value) {
+    if(in_array($value->email, $usernames)){
+      $completed_emails[] = $value->email;  
+    }
+  }
+  
+  
+  /*Load filtered Recent Integrity Table filtered view */
+  
+  $view = views_get_view('recent_integrity_table', 'filtered_page' );
+  $view->init();
+  
+  $view->set_display('block');
+  $view->set_arguments(array($completed_emails));
+  
+  var_dump($completed_emails);
+  
+  return $view->render();
+  
+}
