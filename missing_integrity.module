@@ -53,9 +53,10 @@ function missing_integrity_get_results () {
   $completed_quiz = views_get_view_result('quiz_results', 'page', '501');
   
   $usernames = [];
-  $completed_emails = [];
+  $incomplete_emails = '';
   
-  /* Build array of usernames/email address of
+  /*
+   * Build array of usernames/email address of
    * students who have completed quiz successfully
    */
   
@@ -63,11 +64,22 @@ function missing_integrity_get_results () {
     $usernames[] = $value->users_quiz_node_results_name;
   }
   
+  /*
+   * Check recent_integrity_table view against list of usernames that have completed quiz
+   * If not in the array, add to $incomplete_emails string
+   */
+  
   foreach($full_stu_list as $key => $value) {
-    if(in_array($value->email, $usernames)){
-      $completed_emails[] = $value->email;  
+    if(!in_array($value->email, $usernames)){
+      $incomplete_emails .= $value->email . '+';  
     }
   }
+  
+  /*
+   * Remove characters from beginning and end of $incomplete_emails string
+   */
+  
+  $emails = substr($incomplete_emails, 1, -1);
   
   
   /*Load filtered Recent Integrity Table filtered view */
@@ -75,11 +87,17 @@ function missing_integrity_get_results () {
   $view = views_get_view('recent_integrity_table', 'filtered_page' );
   $view->init();
   
-  $view->set_display('block');
-  $view->set_arguments(array($completed_emails));
+  /*
+   * Set contextual arguments for the view
+   * Filters for only emails that have not completed the academic integrity quiz
+   */
   
-  var_dump($completed_emails);
-  
-  return $view->render();
+  $view->set_arguments(array($emails));
+  $view->set_display('block_1');
+  $view->pre_execute();
+  $view->execute();
+  $content = $view->render();
+  $view->destroy();
+  return  $content;
   
 }
