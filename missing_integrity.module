@@ -37,6 +37,20 @@ function missing_integrity_menu() {
 }
 
 /**
+* Implements hook_views_api().
+*
+* Enabling using templates inside module
+*/
+
+function missing_integrity_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'missing_integrity'),
+    'template path' => drupal_get_path('module', 'missing_integrity') . '/templates',
+  );
+}
+
+/**
  * Implements hook_block_info
  */
 
@@ -158,6 +172,6 @@ function missing_integrity_downloadCSV() {
   header("Content-type: text/csv");
   header("Content-disposition: attachment; filename = report.csv");
   readfile("sites/all/modules/custom/missing_integrity/files/missing_student_report.csv");
-    
+  unlink("sites/all/modules/custom/missing_integrity/files/missing_student_report.csv"); 
 }
 

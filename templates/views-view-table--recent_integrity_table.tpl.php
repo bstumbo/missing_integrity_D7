@@ -19,6 +19,8 @@
  * @ingroup views_templates
  */
 ?>
+<?php print '<ul class="action-links"><li><a href="download" method="post">Download Report</a></li><li><a href="../../import/test_quiz_import">Upload New Student List</a></li></ul>'; ?>
+<?php print '<div><h2>Latest Report</h2></div>'; ?>
 <table <?php if ($classes) { print 'class="'. $classes . '" '; } ?><?php print $attributes; ?>>
    <?php if (!empty($title) || !empty($caption)) : ?>
      <caption><?php print $caption . $title; ?></caption>
