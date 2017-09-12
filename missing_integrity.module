@@ -26,6 +26,13 @@ function missing_integrity_menu() {
     'access arguments' => array('administer users'),
     'type' => MENU_CALLBACK,
   );
+  $items['admin/missing_integrity/download'] = array(
+    'page callback' => 'missing_integrity_downloadCSV',
+    'page arguments' => array(NULL, TRUE),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer users'),
+    #'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -33,7 +40,7 @@ function missing_integrity_menu() {
  * Implements hook_block_info
  */
 
-function custom_module_block_info() {
+function missing_integrity_block_info() {
   $blocks['missing_integrity'] = array(
     'info' => t('Missing Integrity Quiz Block'),
     'cache' => DRUPAL_CACHE_PER_PAGE,
@@ -41,38 +48,19 @@ function custom_module_block_info() {
   return $blocks;
 }
 
+/*
+ * Returns drupal view with list of students missing integrity quiz
+ */
+
 function missing_integrity_get_results () {
   
-  /* 
-   * Get result of current Recent Integrity Table view
-   * Recent Integrity Table view is generated via Data and Feeds module
-   * Shows list of all students for the semester
-   */
+  /* Get all students who are missing integrity quiz result */
   
-  $full_stu_list = views_get_view_result('recent_integrity_table', 'page');
-  $completed_quiz = views_get_view_result('quiz_results', 'page', '501');
-  
-  $usernames = [];
+  $missing = missing_integrity_getMissing();
   $incomplete_emails = '';
   
-  /*
-   * Build array of usernames/email address of
-   * students who have completed quiz successfully
-   */
-  
-  foreach($completed_quiz as $key => $value) {
-    $usernames[] = $value->users_quiz_node_results_name;
-  }
-  
-  /*
-   * Check recent_integrity_table view against list of usernames that have completed quiz
-   * If not in the array, add to $incomplete_emails string
-   */
-  
-  foreach($full_stu_list as $key => $value) {
-    if(!in_array($value->email, $usernames)){
+  foreach($missing as $key => $value) {
       $incomplete_emails .= $value->email . '+';  
-    }
   }
   
   /*
@@ -84,7 +72,7 @@ function missing_integrity_get_results () {
   
   /*Load filtered Recent Integrity Table filtered view */
   
-  $view = views_get_view('recent_integrity_table', 'filtered_page' );
+  $view = views_get_view('recent_integrity_table');
   $view->init();
   
   /*
@@ -101,3 +89,75 @@ function missing_integrity_get_results () {
   return  $content;
   
 }
+
+/*
+ * Gets students with missing integrity quiz and provides object array
+ * for other functions
+ */
+
+function missing_integrity_getMissing() {
+  $full_stu_list = views_get_view_result('recent_integrity_table', 'page');
+  $completed_quiz = views_get_view_result('quiz_results', 'page', '501');
+  
+    
+  $usernames = [];
+  $incomplete = [];
+  
+  /*
+   * Build array of usernames/email address of
+   * students who have completed quiz successfully
+   */
+  
+  foreach($completed_quiz as $key => $value) {
+    $usernames[] = $value->users_quiz_node_results_name;
+  }
+  
+  foreach($full_stu_list as $key => $value) {
+    if(!in_array($value->email, $usernames)){
+      $incomplete[] = $value;  
+    }
+  }
+  
+  /* Return array of student objects who have not compelted quiz */
+  
+  return $incomplete; 
+  
+}
+
+
+/*
+ * Provides a downloadable version of the missing students report.
+ */
+
+function missing_integrity_downloadCSV() {
+  
+  /*
+   * Get missing students via getMissing()
+   */
+  
+  $missing = missing_integrity_getMissing();
+  
+  /*
+   * Create downloadable CSV doc and add students to it
+   */
+    
+  $download_file = fopen("sites/all/modules/custom/missing_integrity/files/missing_student_report.csv", "w") or die("Unable to open file!");
+    
+  fputcsv($download_file, array('Emails', 'First Name', 'Last Name'));
+    
+  foreach($missing as $key => $value) {
+     $row_array = array($value->email, $value->recent_integrity_table_firstname, $value->recent_integrity_table_lastname);
+     fputcsv($download_file, $row_array);  
+  }
+  
+  /*
+   * Close file and make it available for download
+   */
+    
+  fclose($download_file);
+  header("Content-type: text/csv");
+  header("Content-disposition: attachment; filename = report.csv");
+  readfile("sites/all/modules/custom/missing_integrity/files/missing_student_report.csv");
+    
+}
+
